@@ -1,0 +1,27 @@
+{
+  "name": "foracle",
+  "version": "1.0.0",
+  "description": "EIP-1599 fee oracle research",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpestana/foracle.git"
+  },
+  "author": "gpestana",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gpestana/foracle/issues"
+  },
+  "homepage": "https://github.com/gpestana/foracle#readme",
+  "dependencies": {
+    "nodeplotlib": "^1.0.0",
+    "reflect-metadata": "^0.1.13",
+    "rxjs": "^7.5.2",
+    "sleep": "^6.3.0",
+    "web3": "^1.7.0"
+  }
+}
