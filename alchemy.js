@@ -9,7 +9,7 @@ function suggestFees (feeHistoryBlock, n_blocks) {
 
     // base fee gas of the pending block (already defined)
     const baseFeePerGas = Number(data.pending[0].baseFeePerGas);
-
+    
     return {
         fast: fast + baseFeePerGas, 
         avg: average + baseFeePerGas,

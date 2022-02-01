@@ -4,11 +4,12 @@ import sleep from 'sleep';
 
 
 import { suggestFees as zsolt_suggestFees } from './zsolt.js';
-import { suggestFees as autoincrease_suggestFees } from './auto_increase.js'
+//import { suggestFees as autoincrease_suggestFees } from './auto_increase.js'
 import { suggestFees as alchemy_suggestFees } from './alchemy.js'
+import {suggestFees as bpredictor_suggesteFees } from './brave_predictor.js'
 
-const NUM_BLOCKS = 10;
-const REWARD_PERCENTILES = [10, 50, 90];
+const NUM_BLOCKS = 40;
+const REWARD_PERCENTILES = [20, 50, 80];
 
 if (!process.env.NET_ENDPOINT) {
     console.log("NET_ENDPOINT env variable should be defined. E.g 'https://mainnet.infura.io/v3/...'")
@@ -30,16 +31,20 @@ async function generate_data(head_block) {
     let zsolt_result = zsolt_suggestFees(infura_feeHistory);
     console.log("zsolt_result", zsolt_result)
 
-    // autoincrease oracle
-    let startF = 5;
-    let increase = 5;
-    let autoincrease_result = autoincrease_suggestFees(infura_feeHistory, startF, increase);
-    console.log("autoincrease_result", autoincrease_result)
+    // // autoincrease oracle
+    // let startF = 5;
+    // let increase = 5;
+    // let autoincrease_result = autoincrease_suggestFees(infura_feeHistory, startF, increase);
+    // console.log("autoincrease_result", autoincrease_result)
 
     // alchemy oracle
     let alchemy_result = alchemy_suggestFees(infura_pendingBlock, NUM_BLOCKS);
     console.log("alchemy_result", alchemy_result)
     
+    // brave_predictor oracle
+    let bpredictor_result = bpredictor_suggesteFees(infura_pendingBlock, NUM_BLOCKS);
+    console.log("bpredictor_result", bpredictor_result)
+
     let realValue = []
     while (realValue.length == 0) {
         try {
@@ -81,16 +86,16 @@ async function generate_data(head_block) {
         type: 'scatter',
         name: "zsolt prediction",
         },
-        // autoincrease_result
+        // bpredictor_result
         {
         x: [1, 2, 3],
         y: [
-            autoincrease_result.fast,
-            autoincrease_result.avg,
-            autoincrease_result.slow,
+            bpredictor_result.fast,
+            bpredictor_result.avg,
+            bpredictor_result.slow,
         ],
         type: 'scatter',
-        name: "autoincrease prediction",
+        name: "brave wallet prediction",
         },
         // alchemy_result
         {
@@ -111,7 +116,6 @@ async function generate_data(head_block) {
     }
 }
 
-
 async function getRealValue(block_head) {
     return await provider.eth.getFeeHistory(
         1, 
@@ -119,4 +123,3 @@ async function getRealValue(block_head) {
         REWARD_PERCENTILES
     )
 }
-
