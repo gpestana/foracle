@@ -7,83 +7,68 @@ import { suggestFees as zsolt_suggestFees } from './zsolt.js';
 import { suggestFees as autoincrease_suggestFees } from './auto_increase.js'
 import { suggestFees as alchemy_suggestFees } from './alchemy.js'
 
-const infuraMainnet = "https://mainnet.infura.io/v3/d0840f1397c44189a8e44f08571de227"
 const NUM_BLOCKS = 10;
 const REWARD_PERCENTILES = [10, 50, 90];
 
-var web3Provider = new Web3.providers.HttpProvider(infuraMainnet);
+if (!process.env.NET_ENDPOINT) {
+    console.log("NET_ENDPOINT env variable should be defined. E.g 'https://mainnet.infura.io/v3/...'")
+    process.exit(0)
+}
+
+var web3Provider = new Web3.providers.HttpProvider(process.env.NET_ENDPOINT);
 var provider = new Web3(web3Provider);
 
-let block_heads = ["0xd75df0", "0xd75df2", "0xd75df4", "0xd75df6", "0xd75df8"];
+let predicted = await generate_data("latest");
+plot(predicted.data, { title: "Block " + predicted.title });
 
-let d1 = await generate_data(parseInt(block_heads[0], 16));
-let d2 = await generate_data(parseInt(block_heads[1], 16));
-let d3 = await generate_data(parseInt(block_heads[2], 16));
-
-plot(d1);
-plot(d2); 
-plot(d3); 
-
-// generates data to plot
+// generates data to plot from multiple prediction algorithms
 async function generate_data(head_block) {
-    // Result from `provider.eth.getFeeHistory(NUM_BLOCKS, HEAD_BLOCK, REWARD_PERCENTILES);`:
-    // {
-    //     "jsonrpc": "2.0",
-    //     "id": 1,
-    //     "result": {
-    //       "baseFeePerGas": [
-    //         "0x23d7c019f4",
-    //         ...
-    //       ],
-    //       "gasUsedRatio": [
-    //         0.03835086742259035,
-    //         ...
-    //       ],
-    //       "oldestBlock": "0xd75db9",
-    //       "reward": [
-    //         [
-    //           "0x59682f00",
-    //           "0x77359400",
-    //           "0x3f5476a00"
-    //         ],
-    //         ...
-    //     }
-    //   }
+    var infura_pendingBlock = await provider.eth.getFeeHistory(NUM_BLOCKS, "pending", REWARD_PERCENTILES);
     var infura_feeHistory = await provider.eth.getFeeHistory(NUM_BLOCKS, head_block, REWARD_PERCENTILES);
+
+    //console.log(infura_feeHistory)
+    //console.log(infura_pendingBlock)
+    //process.exit(1)
 
     // zsolt oracle
     let zsolt_result = zsolt_suggestFees(infura_feeHistory);
+    console.log("zsolt_result", zsolt_result)
 
     // autoincrease oracle
     let startF = 5;
     let increase = 5;
     let autoincrease_result = autoincrease_suggestFees(infura_feeHistory, startF, increase);
+    console.log("autoincrease_result", autoincrease_result)
 
     // alchemy oracle
-    let historicalBlocks = NUM_BLOCKS;
-    let alchemy_result = alchemy_suggestFees(infura_feeHistory, historicalBlocks);
-
-    // get real value of the gas base price we predicted above
-    if (head_block == "latest") {
-        console.log("Estimates for the latest block, wait to make sure new block is available...")
-        sleep.sleep(30)
+    let alchemy_result = alchemy_suggestFees(infura_pendingBlock, NUM_BLOCKS);
+    console.log("alchemy_result", alchemy_result)
+    
+    let realValue = []
+    while (realValue.length == 0) {
+        try {
+            realValue = await getRealValue(infura_feeHistory.oldestBlock);
+        } catch (e) {
+            console.log(">> New block "+ infura_feeHistory.oldestBlock +" not minted yet, trying again in 15s.. ");
+            console.log("  ("+e.message+")")
+            sleep.sleep(15)
+        }
     }
-    var realValue = await provider.eth.getFeeHistory(
-        1, 
-        parseInt(infura_feeHistory.oldestBlock, 16) + NUM_BLOCKS + 1, 
-        REWARD_PERCENTILES
-    );
 
-    // plot results
-    return [
+    let finalRealValue = {
+        fast: parseInt(realValue.baseFeePerGas[0], 16) + parseInt(realValue.reward[0][2], 16),
+        avg:  parseInt(realValue.baseFeePerGas[0], 16) + parseInt(realValue.reward[0][1], 16),
+        slow:  parseInt(realValue.baseFeePerGas[0], 16) + parseInt(realValue.reward[0][0], 16)
+    }
+
+    let data = [
         // real result
         {
-            x: [1, 2, 3, 4],
+            x: [1, 2, 3],
             y: [
-                realValue.baseFeePerGas[0],
-                realValue.baseFeePerGas[0],
-                realValue.baseFeePerGas[0],
-                realValue.baseFeePerGas[0]
+                finalRealValue.fast,
+                finalRealValue.avg,
+                finalRealValue.slow,
             ],
             type: 'scatter',
             name: "real value",
@@ -91,40 +76,51 @@ async function generate_data(head_block) {
 
         // zsolt_result
         {
-        x: [1, 2, 3, 4],
+        x: [1, 2, 3],
         y: [
-            zsolt_result[0].maxFeePerGas,
-            zsolt_result[1].maxFeePerGas,
-            zsolt_result[2].maxFeePerGas,
-            zsolt_result[3].maxFeePerGas
+            zsolt_result.fast,
+            zsolt_result.avg,
+            zsolt_result.slow,
         ],
         type: 'scatter',
         name: "zsolt prediction",
         },
         // autoincrease_result
         {
-        x: [1, 2, 3, 4],
+        x: [1, 2, 3],
         y: [
-            autoincrease_result[0].maxFeePerGas,
-            autoincrease_result[1].maxFeePerGas,
-            autoincrease_result[2].maxFeePerGas,
-            autoincrease_result[3].maxFeePerGas
+            autoincrease_result.fast,
+            autoincrease_result.avg,
+            autoincrease_result.slow,
         ],
         type: 'scatter',
         name: "autoincrease prediction",
         },
         // alchemy_result
         {
-            x: [1, 2, 3, 4],
+            x: [1, 2, 3],
             y: [
-                alchemy_result[0],
-                alchemy_result[1],
-                alchemy_result[2],
+                alchemy_result.fast,
+                alchemy_result.avg,
+                alchemy_result.slow,
             ],
             type: 'scatter',
             name: "alchemy prediction",
         },
     ];
+
+    return {
+        data: data,
+        title: infura_feeHistory.oldestBlock,
+    }
 }
 
+
+async function getRealValue(block_head) {
+    return await provider.eth.getFeeHistory(
+        1, 
+        parseInt(block_head, 16) + NUM_BLOCKS + 1, 
+        REWARD_PERCENTILES
+    )
+}
 

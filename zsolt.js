@@ -20,18 +20,24 @@ The underlying assumption is that price fluctuations over a given past time peri
 price levels being re-tested by the market over a similar length future time period.
 */
 function suggestFees (feeHistoryBlock) {
-  return suggestFeesAt(feeHistoryBlock, 'latest')
+  let results = suggestFeesAt(feeHistoryBlock);
+  
+  // estimator expects 3 options for fee (maxFeePerGas + maxPriorityFeePerGas)
+  return {
+    fast: results[0].maxFeePerGas + results[0].maxPriorityFeePerGas,
+    avg: results[3].maxFeePerGas + results[3].maxPriorityFeePerGas,
+    slow: results[6].maxFeePerGas + results[6].maxPriorityFeePerGas
+  }
 }
 
 // suggestFeesAt returns fee suggestions at the specified block
-function suggestFeesAt (feeHistory, head) {
+function suggestFeesAt (feeHistory) {
   // feeHistory API call without a reward percentile specified is cheap even with a light client backend because it
   // only needs block headers. Therefore we can afford to fetch a hundred blocks of base fee history in order to make
   // meaningful estimates on variable time scales.
 
   //const feeHistory = (await provider.send('eth_feeHistory', [300, head, []])).result  
 
-  //console.log('feeHistory:', feeHistory)
   const baseFee = []
   const order = []
   for (let i = 0; i < feeHistory.baseFeePerGas.length; i++) {
@@ -189,4 +195,4 @@ function samplingCurve (percentile) {
   )
 }
 
-export { suggestFees, suggestPriorityFee };
+export { suggestFees };

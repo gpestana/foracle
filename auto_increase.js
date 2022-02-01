@@ -1,40 +1,27 @@
-function suggestFees (feeHistoryBlock, startF, increaseF) {
-    
-    let avg = 0;
+// Calculates the average baseFeePerGas of the previous N blocks and adds `increaseFactor` percentage;
+// The percentile rewards define the slow/avg/fast and are defined by the last seen block 
+function suggestFees (feeHistoryBlock, increaseFactor) {
+    let avgFee = 0;
+    let rewards = [0, 0, 0];
+
     let n_blocks = feeHistoryBlock.baseFeePerGas.length;
+
+    // baseFee avg
     feeHistoryBlock.baseFeePerGas.map((fee, i) => {
-        avg += parseInt(fee, 16) /n_blocks ;
+        avgFee += parseInt(fee, 16) /n_blocks;
     });
 
-    return [{
-        "maxFeePerGasBase": avg,
-        "maxFeePerGasIncrease": (avg * startF * 4)/100,
-        "maxFeePerGas": (avg + (avg * startF * 4)/100),
-        "increaseFactor": startF * 4,
-    },
-    {
-        "maxFeePerGasBase": avg,
-        "maxFeePerGasIncrease": (avg * startF * 3)/100,
-        "maxFeePerGas": (avg + (avg * startF * 3)/100),
-        "increaseFactor": startF * 3,
-    },
-    {
-        "maxFeePerGasBase": avg,
-        "maxFeePerGasIncrease": (avg * startF * 2)/100,
-        "maxFeePerGas": (avg + (avg * startF * 2)/100),
-        "increaseFactor": startF * 2,
-    },
-    {
-        "maxFeePerGasBase": avg,
-        "maxFeePerGasIncrease": (avg * startF)/100,
-        "maxFeePerGas": (avg + (avg * startF)/100),
-        "increaseFactor": startF,
-    }
-    ];
+    let baseFee = avgFee + (increaseFactor * avgFee /100);
+
+    let fast = parseInt(feeHistoryBlock.reward[0][2], 16);
+    let avg = parseInt(feeHistoryBlock.reward[0][1], 16);
+    let slow = parseInt(feeHistoryBlock.reward[0][0], 16);
+
+    return {
+        fast: baseFee + fast,
+        avg: baseFee + avg,
+        slow: baseFee + slow,
+      }
 }
 
-function suggestPriorityFee (feeHistoryBlock,) {
-    return "no_impl";
-}
-
-  export { suggestFees, suggestPriorityFee };
+export { suggestFees };
