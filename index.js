@@ -26,10 +26,6 @@ async function generate_data(head_block) {
     var infura_pendingBlock = await provider.eth.getFeeHistory(NUM_BLOCKS, "pending", REWARD_PERCENTILES);
     var infura_feeHistory = await provider.eth.getFeeHistory(NUM_BLOCKS, head_block, REWARD_PERCENTILES);
 
-    //console.log(infura_feeHistory)
-    //console.log(infura_pendingBlock)
-    //process.exit(1)
-
     // zsolt oracle
     let zsolt_result = zsolt_suggestFees(infura_feeHistory);
     console.log("zsolt_result", zsolt_result)

@@ -1,15 +1,14 @@
 // Estimator based on https://docs.alchemy.com/alchemy/guides/eip-1559/gas-estimator
 // baseFeeGas is fetched from "pending" block. Average of past rewards are used as slow/avg/fast indicators
 function suggestFees (feeHistoryBlock, n_blocks) {
+    const data = formatFeeHistory(feeHistoryBlock, true, n_blocks);
 
-    const blocks = formatFeeHistory(feeHistoryBlock, false, n_blocks);
-
-    const slow    = avg(blocks.map(b => b.priorityFeePerGas[0]));
-    const average = avg(blocks.map(b => b.priorityFeePerGas[1]));
-    const fast    = avg(blocks.map(b => b.priorityFeePerGas[2]));
+    const slow    = avg(data.blocks.map(b => b.priorityFeePerGas[0]));
+    const average = avg(data.blocks.map(b => b.priorityFeePerGas[1]));
+    const fast    = avg(data.blocks.map(b => b.priorityFeePerGas[2]));
 
     // base fee gas of the pending block (already defined)
-    const baseFeePerGas = Number(blocks[0].baseFeePerGas);
+    const baseFeePerGas = Number(data.pending[0].baseFeePerGas);
 
     return {
         fast: fast + baseFeePerGas, 
@@ -33,15 +32,19 @@ function formatFeeHistory(result, includePending, n_blocks) {
       blockNum += 1;
       index += 1;
     }
+    let pending = [];
     if (includePending) {
-      blocks.push({
+      pending.push({
         number: "pending",
         baseFeePerGas: Number(result.baseFeePerGas[n_blocks]),
         gasUsedRatio: NaN,
         priorityFeePerGas: [],
       });
     }
-    return blocks;
+    return {
+        blocks: blocks,
+        pending: pending
+    };
   }
 
 function avg(arr) {
